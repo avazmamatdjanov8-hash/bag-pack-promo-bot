@@ -740,7 +740,8 @@ function managePage(url) {
   const products = getDistinctProducts();
   const wheelCode = (url.searchParams.get("wheelCode") || "").trim();
   const wheelProduct = (url.searchParams.get("wheelProduct") || "").trim();
-  const wheelUsedCount = url.searchParams.get("wheelUsedCount") || "";
+  const wheelMode = (url.searchParams.get("wheelMode") || "used").trim() === "free" ? "free" : "used";
+  const wheelCount = url.searchParams.get("wheelCount") || "";
   const wheelOptions = [`<option value="">Любой товар</option>`]
     .concat(
       products.map(
@@ -748,15 +749,17 @@ function managePage(url) {
       )
     )
     .join("");
+  const wheelModeLabel = wheelMode === "free" ? "свободный" : "использованный";
+  const wheelCountLabel = wheelMode === "free" ? "Свободных кодов в этой категории" : "Использованных кодов в этой категории";
   const wheelResult = wheelCode
     ? `
       <div class="fortune-result">
         <div class="small">Выпал товар: ${escapeHtml(wheelProduct || "Любой товар")}</div>
         <div class="fortune-code">${escapeHtml(wheelCode)}</div>
-        <div class="small">Использованных кодов в этой категории: ${escapeHtml(wheelUsedCount || "0")}</div>
+        <div class="small">${escapeHtml(wheelCountLabel)}: ${escapeHtml(wheelCount || "0")}</div>
       </div>
     `
-    : `<div class="small">Нажмите кнопку, и админка выберет один случайный использованный промокод.</div>`;
+    : `<div class="small">Нажмите кнопку, и админка выберет один случайный ${escapeHtml(wheelModeLabel)} промокод.</div>`;
   const productList = products.length
     ? products.map((item) => `<span class="badge">${escapeHtml(item)}</span>`).join(" ")
     : `<span class="small">Пока нет сохранённых товаров.</span>`;
@@ -811,6 +814,12 @@ STR-000401,Стрейч-пленка"></textarea>
             </div>
             ${wheelResult}
             <form class="filters" method="POST" action="/actions/draw-wheel">
+              <label>Какие коды крутить
+                <select name="status">
+                  <option value="used" ${wheelMode === "used" ? "selected" : ""}>Использованные</option>
+                  <option value="free" ${wheelMode === "free" ? "selected" : ""}>Свободные</option>
+                </select>
+              </label>
               <label>Из какого товара выбирать код
                 <select name="productType">${wheelOptions}</select>
               </label>
@@ -837,7 +846,7 @@ STR-000401,Стрейч-пленка"></textarea>
           <div class="section-title"><h2>Что можно делать без команд</h2></div>
           <div class="small">1. Создавать серии промокодов по товару через форму.</div>
           <div class="small">2. Добавлять отдельные коды или вставлять список вручную.</div>
-          <div class="small">3. Крутить колесо удачи и получать один случайный использованный код.</div>
+          <div class="small">3. Крутить колесо удачи и получать случайный свободный или использованный код.</div>
           <div class="small">4. Освобождать использованный код прямо из списка промокодов.</div>
           <div class="small">5. Удалять свободные коды, которые не нужны.</div>
         </div>
@@ -935,12 +944,12 @@ async function handlePost(req, res, url) {
 
   if (path === "/actions/draw-wheel") {
     const productType = String(form.get("productType") || "").trim();
-    const result = drawRandomPromoCode(productType);
+    const status = String(form.get("status") || "used").trim();
+    const result = drawRandomPromoCode({ productType, status });
 
     if (!result.ok) {
-      const notice = productType
-        ? `Для товара "${productType}" нет использованных промокодов.`
-        : "Использованных промокодов нет.";
+      const label = status === "free" ? "свободных промокодов" : "использованных промокодов";
+      const notice = productType ? `Для товара "${productType}" нет ${label}.` : `${label[0].toUpperCase()}${label.slice(1)} нет.`;
       return redirect(res, makeQuery("/manage", { notice }));
     }
 
@@ -950,7 +959,8 @@ async function handlePost(req, res, url) {
         notice: "Колесо выбрало промокод.",
         wheelCode: result.promoCode.code,
         wheelProduct: result.promoCode.product_type,
-        wheelUsedCount: result.usedCount
+        wheelCount: result.totalCount,
+        wheelMode: result.status
       })
     );
   }

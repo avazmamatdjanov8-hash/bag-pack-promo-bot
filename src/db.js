@@ -435,6 +435,32 @@ function createDb(databasePath) {
       FROM promo_codes
       WHERE used_by_participant_id IS NOT NULL
         AND product_type = ?
+    `),
+    randomFreePromoCodeAny: db.prepare(`
+      SELECT id, code, product_type
+      FROM promo_codes
+      WHERE used_by_participant_id IS NULL
+      ORDER BY RANDOM()
+      LIMIT 1
+    `),
+    randomFreePromoCodeByProduct: db.prepare(`
+      SELECT id, code, product_type
+      FROM promo_codes
+      WHERE used_by_participant_id IS NULL
+        AND product_type = ?
+      ORDER BY RANDOM()
+      LIMIT 1
+    `),
+    freeCodesCountAny: db.prepare(`
+      SELECT COUNT(*) AS total
+      FROM promo_codes
+      WHERE used_by_participant_id IS NULL
+    `),
+    freeCodesCountByProduct: db.prepare(`
+      SELECT COUNT(*) AS total
+      FROM promo_codes
+      WHERE used_by_participant_id IS NULL
+        AND product_type = ?
     `)
   };
 
@@ -718,24 +744,37 @@ function createDb(databasePath) {
     return { ok: result.changes > 0 };
   }
 
-  function drawRandomPromoCode(productType = "") {
+  function drawRandomPromoCode({ productType = "", status = "used" } = {}) {
     const cleanProductType = String(productType || "").trim();
-    const promoCode = cleanProductType
-      ? statements.randomUsedPromoCodeByProduct.get(cleanProductType)
-      : statements.randomUsedPromoCodeAny.get();
+    const cleanStatus = String(status || "used").trim().toLowerCase() === "free" ? "free" : "used";
+
+    const promoCode =
+      cleanStatus === "free"
+        ? cleanProductType
+          ? statements.randomFreePromoCodeByProduct.get(cleanProductType)
+          : statements.randomFreePromoCodeAny.get()
+        : cleanProductType
+          ? statements.randomUsedPromoCodeByProduct.get(cleanProductType)
+          : statements.randomUsedPromoCodeAny.get();
 
     if (!promoCode) {
-      return { ok: false, error: "no_used_codes" };
+      return { ok: false, error: cleanStatus === "free" ? "no_free_codes" : "no_used_codes" };
     }
 
-    const usedCount = cleanProductType
-      ? statements.usedCodesCountByProduct.get(cleanProductType).total
-      : statements.usedCodesCountAny.get().total;
+    const totalCount =
+      cleanStatus === "free"
+        ? cleanProductType
+          ? statements.freeCodesCountByProduct.get(cleanProductType).total
+          : statements.freeCodesCountAny.get().total
+        : cleanProductType
+          ? statements.usedCodesCountByProduct.get(cleanProductType).total
+          : statements.usedCodesCountAny.get().total;
 
     return {
       ok: true,
       promoCode,
-      usedCount
+      totalCount,
+      status: cleanStatus
     };
   }
 
