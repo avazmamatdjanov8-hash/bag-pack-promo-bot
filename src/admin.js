@@ -838,7 +838,7 @@ STR-000401,Стрейч-пленка"></textarea>
             <a class="button-link secondary" href="/participants">Открыть участников</a>
             <a class="button-link secondary" href="/entries">Открыть историю вводов</a>
             <a class="button-link secondary" href="/export/participants.csv">Выгрузить участников</a>
-            <a class="button-link secondary" href="/export/codes.csv">Выгрузить промокоды</a>
+            <a class="button-link secondary" href="/export/codes.csv">Список промокодов</a>
             <a class="button-link secondary" href="/export/entries.csv">Выгрузить историю</a>
           </div>
         </div>
@@ -1011,16 +1011,9 @@ function handleExport(res, url) {
   }
 
   if (url.pathname === "/export/codes.csv") {
-    const rows = getPromoCodesAdmin({ query: "", status: "all", limit: 100000 }).map((item) => [
-      item.code,
-      item.product_type,
-      item.used_at ? "Использован" : "Свободен",
-      item.phone || "",
-      formatPerson(item),
-      item.used_at || ""
-    ]);
+    const rows = getPromoCodesAdmin({ query: "", status: "all", limit: 100000 }).map((item) => [item.code]);
 
-    return exportCsv(res, rows, ["Промокод", "Товар", "Статус", "Телефон", "Участник", "Дата"], "promo_codes.csv");
+    return exportCsv(res, rows, ["Промокод"], "promo_codes.csv");
   }
 
   if (url.pathname === "/export/entries.csv") {
