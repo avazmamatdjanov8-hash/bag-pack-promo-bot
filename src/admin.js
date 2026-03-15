@@ -982,13 +982,13 @@ async function handlePost(req, res, url) {
 }
 
 function exportCsv(res, rows, headers, filename) {
-  const csvLines = [headers.join(",")];
+  const csvLines = [`sep=;`, headers.map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`).join(";")];
 
   for (const row of rows) {
     csvLines.push(
       row
         .map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`)
-        .join(",")
+        .join(";")
     );
   }
 
@@ -1007,20 +1007,20 @@ function handleExport(res, url) {
       item.total_codes
     ]);
 
-    return exportCsv(res, rows, ["telegram_user_id", "name", "phone", "language", "total_codes"], "participants.csv");
+    return exportCsv(res, rows, ["Telegram ID", "Участник", "Телефон", "Язык", "Кодов"], "participants.csv");
   }
 
   if (url.pathname === "/export/codes.csv") {
     const rows = getPromoCodesAdmin({ query: "", status: "all", limit: 100000 }).map((item) => [
       item.code,
       item.product_type,
-      item.used_at ? "used" : "free",
+      item.used_at ? "Использован" : "Свободен",
       item.phone || "",
       formatPerson(item),
       item.used_at || ""
     ]);
 
-    return exportCsv(res, rows, ["code", "product_type", "status", "phone", "participant", "used_at"], "promo_codes.csv");
+    return exportCsv(res, rows, ["Промокод", "Товар", "Статус", "Телефон", "Участник", "Дата"], "promo_codes.csv");
   }
 
   if (url.pathname === "/export/entries.csv") {
@@ -1032,7 +1032,7 @@ function handleExport(res, url) {
       item.created_at
     ]);
 
-    return exportCsv(res, rows, ["code", "product_type", "phone", "participant", "created_at"], "code_entries.csv");
+    return exportCsv(res, rows, ["Промокод", "Товар", "Телефон", "Участник", "Дата"], "code_entries.csv");
   }
 
   res.statusCode = 404;
