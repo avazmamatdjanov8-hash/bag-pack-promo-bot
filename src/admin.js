@@ -1,4 +1,4 @@
-require("dotenv").config();
+﻿require("dotenv").config();
 
 const http = require("http");
 const { URL, URLSearchParams } = require("url");
@@ -10,7 +10,7 @@ const ADMIN_PORT = Number(process.env.PORT || process.env.ADMIN_PORT || 3000);
 const ADMIN_HOST = process.env.ADMIN_HOST || (IS_CLOUD ? "0.0.0.0" : "127.0.0.1");
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change_this_password";
-const { db, getAdminOverview, getParticipantsAdmin, getParticipantAdminDetails, getPromoCodesAdmin, getCodeEntriesAdmin, getDistinctProducts, createSinglePromoCode, generatePromoCodes, releasePromoCode, deletePromoCode } =
+const { db, getAdminOverview, getParticipantsAdmin, getParticipantAdminDetails, getPromoCodesAdmin, getCodeEntriesAdmin, getDistinctProducts, createSinglePromoCode, generatePromoCodes, drawRandomPromoCode, releasePromoCode, deletePromoCode } =
   createDb(DATABASE_PATH);
 
 function escapeHtml(value) {
@@ -324,6 +324,83 @@ function pageLayout({ title, active, content, notice }) {
     }
     .row-actions form {
       margin: 0;
+    }
+    .fortune-wrap {
+      display: grid;
+      gap: 16px;
+    }
+    .fortune-stage {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 250px;
+      padding: 12px 0 8px;
+    }
+    .fortune-wheel {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      border: 10px solid rgba(255, 255, 255, 0.9);
+      box-shadow: inset 0 0 0 1px rgba(111, 92, 68, 0.1), 0 20px 45px rgba(44, 33, 20, 0.14);
+      background:
+        conic-gradient(
+          from -18deg,
+          #1d6f5b 0deg 45deg,
+          #e0a34a 45deg 90deg,
+          #c95f45 90deg 135deg,
+          #edd8b2 135deg 180deg,
+          #4f8578 180deg 225deg,
+          #f1b96b 225deg 270deg,
+          #a34735 270deg 315deg,
+          #f5e8d0 315deg 360deg
+        );
+      position: relative;
+    }
+    .fortune-wheel::after {
+      content: "";
+      position: absolute;
+      inset: 50%;
+      width: 74px;
+      height: 74px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: rgba(255, 252, 247, 0.95);
+      border: 1px solid rgba(111, 92, 68, 0.14);
+      box-shadow: 0 8px 18px rgba(44, 33, 20, 0.12);
+    }
+    .fortune-wheel::before {
+      content: "B&P";
+      position: absolute;
+      inset: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      font-weight: 700;
+      color: var(--accent-strong);
+      letter-spacing: 0.08em;
+    }
+    .fortune-arrow {
+      position: absolute;
+      top: 4px;
+      width: 0;
+      height: 0;
+      border-left: 16px solid transparent;
+      border-right: 16px solid transparent;
+      border-top: 28px solid var(--danger);
+      filter: drop-shadow(0 8px 10px rgba(44, 33, 20, 0.16));
+    }
+    .fortune-result {
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(229, 243, 238, 0.82);
+      border: 1px solid rgba(29, 111, 91, 0.14);
+    }
+    .fortune-code {
+      font-size: 28px;
+      line-height: 1.2;
+      margin: 6px 0;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      word-break: break-word;
     }
     @media (max-width: 980px) {
       .hero,
@@ -661,6 +738,25 @@ function entriesPage(url) {
 
 function managePage(url) {
   const products = getDistinctProducts();
+  const wheelCode = (url.searchParams.get("wheelCode") || "").trim();
+  const wheelProduct = (url.searchParams.get("wheelProduct") || "").trim();
+  const wheelUsedCount = url.searchParams.get("wheelUsedCount") || "";
+  const wheelOptions = [`<option value="">Любой товар</option>`]
+    .concat(
+      products.map(
+        (item) => `<option value="${escapeHtml(item)}"${wheelProduct === item ? " selected" : ""}>${escapeHtml(item)}</option>`
+      )
+    )
+    .join("");
+  const wheelResult = wheelCode
+    ? `
+      <div class="fortune-result">
+        <div class="small">Выпал товар: ${escapeHtml(wheelProduct || "Любой товар")}</div>
+        <div class="fortune-code">${escapeHtml(wheelCode)}</div>
+        <div class="small">Использованных кодов в этой категории: ${escapeHtml(wheelUsedCount || "0")}</div>
+      </div>
+    `
+    : `<div class="small">Нажмите кнопку, и админка выберет один случайный использованный промокод.</div>`;
   const productList = products.length
     ? products.map((item) => `<span class="badge">${escapeHtml(item)}</span>`).join(" ")
     : `<span class="small">Пока нет сохранённых товаров.</span>`;
@@ -707,6 +803,22 @@ STR-000401,Стрейч-пленка"></textarea>
       </div>
       <div class="stack">
         <div class="panel">
+          <div class="section-title"><h2>Колесо удачи</h2><div class="small">Только для администратора</div></div>
+          <div class="fortune-wrap">
+            <div class="fortune-stage">
+              <div class="fortune-arrow"></div>
+              <div class="fortune-wheel"></div>
+            </div>
+            ${wheelResult}
+            <form class="filters" method="POST" action="/actions/draw-wheel">
+              <label>Из какого товара выбирать код
+                <select name="productType">${wheelOptions}</select>
+              </label>
+              <div class="actions"><button type="submit">Крутить колесо</button></div>
+            </form>
+          </div>
+        </div>
+        <div class="panel">
           <div class="section-title"><h2>Текущие товары</h2><div class="small">Все товарные категории, уже найденные в базе</div></div>
           <div class="actions">${productList}</div>
         </div>
@@ -725,9 +837,9 @@ STR-000401,Стрейч-пленка"></textarea>
           <div class="section-title"><h2>Что можно делать без команд</h2></div>
           <div class="small">1. Создавать серии промокодов по товару через форму.</div>
           <div class="small">2. Добавлять отдельные коды или вставлять список вручную.</div>
-          <div class="small">3. Освобождать использованный код прямо из списка промокодов.</div>
-          <div class="small">4. Удалять свободные коды, которые не нужны.</div>
-          <div class="small">5. Смотреть карточку участника и историю его вводов.</div>
+          <div class="small">3. Крутить колесо удачи и получать один случайный использованный код.</div>
+          <div class="small">4. Освобождать использованный код прямо из списка промокодов.</div>
+          <div class="small">5. Удалять свободные коды, которые не нужны.</div>
         </div>
       </div>
     </div>
@@ -819,6 +931,28 @@ async function handlePost(req, res, url) {
 
     const notice = `Импорт завершён: добавлено ${added}, дублей ${duplicates}, пропущено строк ${parsed.skipped}.`;
     return redirect(res, makeQuery("/manage", { notice }));
+  }
+
+  if (path === "/actions/draw-wheel") {
+    const productType = String(form.get("productType") || "").trim();
+    const result = drawRandomPromoCode(productType);
+
+    if (!result.ok) {
+      const notice = productType
+        ? `Для товара "${productType}" нет использованных промокодов.`
+        : "Использованных промокодов нет.";
+      return redirect(res, makeQuery("/manage", { notice }));
+    }
+
+    return redirect(
+      res,
+      makeQuery("/manage", {
+        notice: "Колесо выбрало промокод.",
+        wheelCode: result.promoCode.code,
+        wheelProduct: result.promoCode.product_type,
+        wheelUsedCount: result.usedCount
+      })
+    );
   }
 
   if (path === "/actions/release-code") {
@@ -938,3 +1072,4 @@ const server = http.createServer(async (req, res) => {
 server.listen(ADMIN_PORT, ADMIN_HOST, () => {
   console.log(`Admin panel is running at http://localhost:${ADMIN_PORT}`);
 });
+

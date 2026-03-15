@@ -409,6 +409,32 @@ function createDb(databasePath) {
       )
       WHERE product_type IS NOT NULL AND TRIM(product_type) != ''
       ORDER BY product_type ASC
+    `),
+    randomUsedPromoCodeAny: db.prepare(`
+      SELECT id, code, product_type
+      FROM promo_codes
+      WHERE used_by_participant_id IS NOT NULL
+      ORDER BY RANDOM()
+      LIMIT 1
+    `),
+    randomUsedPromoCodeByProduct: db.prepare(`
+      SELECT id, code, product_type
+      FROM promo_codes
+      WHERE used_by_participant_id IS NOT NULL
+        AND product_type = ?
+      ORDER BY RANDOM()
+      LIMIT 1
+    `),
+    usedCodesCountAny: db.prepare(`
+      SELECT COUNT(*) AS total
+      FROM promo_codes
+      WHERE used_by_participant_id IS NOT NULL
+    `),
+    usedCodesCountByProduct: db.prepare(`
+      SELECT COUNT(*) AS total
+      FROM promo_codes
+      WHERE used_by_participant_id IS NOT NULL
+        AND product_type = ?
     `)
   };
 
@@ -692,6 +718,27 @@ function createDb(databasePath) {
     return { ok: result.changes > 0 };
   }
 
+  function drawRandomPromoCode(productType = "") {
+    const cleanProductType = String(productType || "").trim();
+    const promoCode = cleanProductType
+      ? statements.randomUsedPromoCodeByProduct.get(cleanProductType)
+      : statements.randomUsedPromoCodeAny.get();
+
+    if (!promoCode) {
+      return { ok: false, error: "no_used_codes" };
+    }
+
+    const usedCount = cleanProductType
+      ? statements.usedCodesCountByProduct.get(cleanProductType).total
+      : statements.usedCodesCountAny.get().total;
+
+    return {
+      ok: true,
+      promoCode,
+      usedCount
+    };
+  }
+
   return {
     db,
     normalizeCode,
@@ -713,6 +760,7 @@ function createDb(databasePath) {
     getDistinctProducts,
     createSinglePromoCode,
     generatePromoCodes,
+    drawRandomPromoCode,
     releasePromoCode,
     deletePromoCode
   };
