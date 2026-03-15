@@ -84,6 +84,11 @@ http://localhost:3000
 npm.cmd start
 ```
 
+Или можно запускать в один клик через файлы:
+
+- [Start Admin.cmd](C:\Users\yaaza\OneDrive\Desktop\bag&pack_promo\Start%20Admin.cmd) — запускает локальную админку и открывает браузер.
+- [Start Bot.cmd](C:\Users\yaaza\OneDrive\Desktop\bag&pack_promo\Start%20Bot.cmd) — запускает Telegram-бота.
+
 ## Админка
 
 Админка работает только локально на этом компьютере.

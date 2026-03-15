@@ -5,8 +5,9 @@ const { URL, URLSearchParams } = require("url");
 const { createDb } = require("./db");
 
 const DATABASE_PATH = process.env.DATABASE_PATH || "./data/promo.sqlite";
-const ADMIN_PORT = Number(process.env.ADMIN_PORT || 3000);
-const ADMIN_HOST = process.env.ADMIN_HOST || "127.0.0.1";
+const IS_CLOUD = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID || process.env.PORT);
+const ADMIN_PORT = Number(process.env.PORT || process.env.ADMIN_PORT || 3000);
+const ADMIN_HOST = process.env.ADMIN_HOST || (IS_CLOUD ? "0.0.0.0" : "127.0.0.1");
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change_this_password";
 const { db, getAdminOverview, getParticipantsAdmin, getParticipantAdminDetails, getPromoCodesAdmin, getCodeEntriesAdmin, getDistinctProducts, createSinglePromoCode, generatePromoCodes, releasePromoCode, deletePromoCode } =

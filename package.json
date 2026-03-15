@@ -5,6 +5,7 @@
   "main": "src/bot.js",
   "scripts": {
     "start": "node src/bot.js",
+    "start:all": "node src/start-all.js",
     "admin": "node src/admin.js",
     "dev": "node --watch src/bot.js",
     "import:codes": "node scripts/import-codes.js",
