@@ -1,0 +1,20 @@
+services:
+  bot:
+    build: .
+    command: node src/bot.js
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+
+  admin:
+    build: .
+    command: node src/admin.js
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${ADMIN_PORT:-3000}:${ADMIN_PORT:-3000}"
+    volumes:
+      - ./data:/app/data

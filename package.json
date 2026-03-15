@@ -1,0 +1,22 @@
+{
+  "name": "bag-pack-promo-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot for Bag & Pack promo campaigns",
+  "main": "src/bot.js",
+  "scripts": {
+    "start": "node src/bot.js",
+    "admin": "node src/admin.js",
+    "dev": "node --watch src/bot.js",
+    "import:codes": "node scripts/import-codes.js",
+    "generate:codes": "node scripts/generate-codes.js",
+    "db:report": "node scripts/db-report.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.7",
+    "telegraf": "^4.16.3"
+  }
+}
